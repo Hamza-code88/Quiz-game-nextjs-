@@ -17,10 +17,13 @@ export default function Home() {
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null); // Track selected category
+  const [timeUPSound, setTimeUPSound] = useState(null); // State to hold audio object
 
-
-  const timeUPSound = new Audio('/timeup.wav')
-
+  useEffect(() => {
+    // Initialize the Audio object on the client side
+    const sound = new Audio("/timeup.wav");
+    setTimeUPSound(sound);
+  }, []);
 
   const handleStartQuiz = () => {
     setQuizStarted(true);
@@ -59,7 +62,6 @@ export default function Home() {
     }
   };
 
-  // Function to handle user option selection
   const handleSelect = (option) => {
     setSelectedOption(option);
     const correct = option === questions[currentQ].correct_answer;
@@ -81,7 +83,6 @@ export default function Home() {
     }
   };
 
-  // Timer functionality (counts down and updates the timer)
   useEffect(() => {
     if (timer > 0 && !isTimeUp && quizStarted && selectedCategory && !loading) {
       const intervalId = setInterval(() => {
@@ -92,9 +93,11 @@ export default function Home() {
     } else if (timer === 0) {
       setIsTimeUp(true); // Set isTimeUp to true when timer hits 0
 
-      timeUPSound.play();
+      if (timeUPSound) {
+        timeUPSound.play(); // Play sound only if initialized
+      }
     }
-  }, [timer, isTimeUp, quizStarted, selectedCategory, loading]);
+  }, [timer, isTimeUp, quizStarted, selectedCategory, loading, timeUPSound]);
 
   useEffect(() => {
     if (selectedCategory) {
