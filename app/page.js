@@ -1,101 +1,145 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useState } from "react";
+import HomeContent from "./components/Home";
+import QuestionCard from "./components/QuestionCard";
+import ResultPage from "./components/ResultPage";
+import Categories from "./components/Categories"; // Import Categories
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [quizStarted, setQuizStarted] = useState(false);
+  const [currentQ, setCurrentQ] = useState(0);
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [score, setScore] = useState(0);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [isCorrect, setIsCorrect] = useState(null);
+  const [timer, setTimer] = useState(20);
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  const [quizComplete, setQuizComplete] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null); // Track selected category
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+  const timeUPSound = new Audio('/timeup.wav')
+
+
+  const handleStartQuiz = () => {
+    setQuizStarted(true);
+  };
+
+  const handleSelectCategory = (categoryId) => {
+    setSelectedCategory(categoryId);
+    fetchQuestions(categoryId); // Fetch questions based on selected category
+    setTimer(20); // Reset timer on category select
+    setIsTimeUp(false); // Reset time up flag
+  };
+
+  const fetchQuestions = async (categoryId) => {
+    const baseUrl = "https://opentdb.com/api.php?amount=10&category=";
+    const difficulty = "&difficulty=easy&type=multiple"; // Common part for all categories
+
+    const apiUrl = `${baseUrl}${categoryId}${difficulty}`;
+
+    try {
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+
+      const formattedQuestions = data.results.map((item) => ({
+        question: item.question,
+        options: [...item.incorrect_answers, item.correct_answer].sort(
+          () => Math.random() - 0.5
+        ),
+        correct_answer: item.correct_answer,
+      }));
+
+      setQuestions(formattedQuestions);
+      setLoading(false);
+    } catch (error) {
+      console.log("Error fetching questions", error);
+      setLoading(false);
+    }
+  };
+
+  // Function to handle user option selection
+  const handleSelect = (option) => {
+    setSelectedOption(option);
+    const correct = option === questions[currentQ].correct_answer;
+    setIsCorrect(correct);
+    if (correct) {
+      setScore((prevScore) => prevScore + 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentQ < questions.length - 1) {
+      setCurrentQ((prevCurrentQ) => prevCurrentQ + 1);
+      setSelectedOption(null);
+      setIsCorrect(null);
+      setTimer(20); // Reset timer for the next question
+      setIsTimeUp(false); // Reset isTimeUp state
+    } else {
+      setQuizComplete(true);
+    }
+  };
+
+  // Timer functionality (counts down and updates the timer)
+  useEffect(() => {
+    if (timer > 0 && !isTimeUp && quizStarted && selectedCategory && !loading) {
+      const intervalId = setInterval(() => {
+        setTimer((prevTimer) => prevTimer - 1);
+      }, 1000);
+
+      return () => clearInterval(intervalId); // Cleanup interval on unmount or when timer hits 0
+    } else if (timer === 0) {
+      setIsTimeUp(true); // Set isTimeUp to true when timer hits 0
+
+      timeUPSound.play();
+    }
+  }, [timer, isTimeUp, quizStarted, selectedCategory, loading]);
+
+  useEffect(() => {
+    if (selectedCategory) {
+      fetchQuestions(selectedCategory); // Fetch questions once category is selected
+    }
+  }, [selectedCategory]);
+
+  return (
+    <div className="bg-gradient-to-r from-teal-300 via-teal-400 to-teal-500 min-h-screen flex flex-col items-center justify-center py-8 px-4">
+      {!quizStarted ? (
+        <HomeContent onStartQuiz={handleStartQuiz} />
+      ) : !selectedCategory ? (
+        <Categories onSelectCategory={handleSelectCategory} /> // Show categories after quiz starts
+      ) : loading ? (
+        <p>Loading...</p>
+      ) : quizComplete ? (
+        <ResultPage
+          score={score}
+          totalQuestions={questions.length}
+          onRestart={() => {
+            setQuizStarted(false);
+            setQuizComplete(false);
+            setCurrentQ(0);
+            setScore(0);
+            setSelectedOption(null);
+            setIsCorrect(null);
+            setTimer(20); // Reset timer
+            setIsTimeUp(false);
+            setSelectedCategory(null); // Reset category selection
+          }}
+        />
+      ) : (
+        <QuestionCard
+          question={questions[currentQ].question}
+          options={questions[currentQ].options}
+          onSelect={handleSelect} // Pass handleSelect to QuestionCard
+          onNext={handleNext}
+          correctAnswer={questions[currentQ].correct_answer}
+          selectedOption={selectedOption}
+          isCorrect={isCorrect}
+          score={score}
+          isTimeUp={isTimeUp}
+          timer={timer}
+        />
+      )}
     </div>
   );
 }
